@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <http:request-config name="HTTP_Request_Configuration" host="training-american-ws.cloudhub.io" port="80" basePath="/api" doc:name="HTTP Request Configuration"/>
+    <flow name="enricher-demoFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
+        <set-payload value="ORIGINAL INPUT PAYLOAD" doc:name="Set Original Payload"/>
+        <enricher target="#[flowVars.flightsLookup]" doc:name="Message Enricher">
+            <flow-ref name="lookupFlow" doc:name="lookupFlow"/>
+        </enricher>
+        <set-payload value="#[payload + flowVars.flightsLookup]" doc:name="Set Enriched Payload"/>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <sub-flow name="lookupFlow">
+        <http:request config-ref="HTTP_Request_Configuration" path="/flights" method="GET" doc:name="HTTP Call Flights Service"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:input-payload doc:sample="sample_data/json.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload[0].code]]></dw:set-payload>
+        </dw:transform-message>
+        <logger level="INFO" doc:name="Logger"/>
+    </sub-flow>
+</mule>
